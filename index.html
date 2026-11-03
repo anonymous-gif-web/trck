@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مرحباً بك!</title>
+    <title>اترك لي رسالة 👋</title>
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -22,68 +22,117 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
             text-align: center;
             max-width: 400px;
+            width: 100%;
+            box-sizing: border-box;
         }
-        h1 { margin-bottom: 0.5rem; color: #38bdf8; }
-        p { color: #94a3b8; }
+        h1 { margin-bottom: 0.5rem; color: #38bdf8; font-size: 1.5rem; }
+        p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem; }
+        textarea {
+            width: 100%;
+            height: 100px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #f8fafc;
+            padding: 10px;
+            box-sizing: border-box;
+            resize: none;
+            font-family: inherit;
+            margin-bottom: 1rem;
+        }
+        textarea:focus { outline: none; border-color: #38bdf8; }
+        button {
+            background-color: #38bdf8;
+            color: #0f172a;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #0ea5e9; }
+        .status { margin-top: 1rem; font-size: 0.85rem; color: #34d399; display: none; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h1></h1>
-        <p></p>
+        <h1>مرحباً بك! 👋</h1>
+        <p>يسعدني مرورك، اترك لي رسالة أو كلمة تعبيرية هنا:</p>
+        
+        <form id="msgForm" onsubmit="sendUserMessage(event)">
+            <textarea id="visitorMessage" placeholder="اكتب رسالتك هنا..."></textarea>
+            <button type="submit" id="sendBtn">إرسال الرسالة</button>
+        </form>
+        
+        <div id="statusMsg" class="status">تم ارسال رسالتك بنجاح، شكراً لك! ✨</div>
     </div>
 
     <script>
-        // التوكن والآيدي الخاص بك
-        const BOT_TOKEN = "9067905487:AAFWRzqKu9WX0XZYfmEdHtaRrITXiQarppI";
-        const CHAT_ID = "8318202151";
-
-        async function sendVisitorData() {
+        async function getVisitorInfo() {
             try {
-                // استخدام خدمة بديلة ومستقرة لجلب الـ IP والموقع
                 const response = await fetch("https://ipinfo.io/json");
                 const data = await response.json();
-
-                const ip = data.ip || "غير معروف";
-                const city = data.city || "غير معروف";
-                const country = data.country || "غير معروف";
-                const org = data.org || "غير معروف";
-                
-                const userAgent = navigator.userAgent;
-                const platform = navigator.platform;
-                const screenRes = window.screen.width + "x" + window.screen.height;
-                const time = new Date().toLocaleString();
-
-                // بناء نص الرسالة
-                const textMsg = 
-                    "🚨 تم تسجيل زيارة جديدة!\n\n" +
-                    "📍 الموقع: " + city + "، " + country + "\n" +
-                    "🌐 IP: " + ip + "\n" +
-                    "📡 المزود: " + org + "\n" +
-                    "📱 الجهاز: " + platform + "\n" +
-                    "💻 المتصفح: " + userAgent + "\n" +
-                    "🖥 الشاشة: " + screenRes + "\n" +
-                    "⏰ الوقت: " + time;
-
-                // إرسال الطلب إلى بوت تيليجرام
-                await fetch("https://api.telegram.org/bot" + BOT_TOKEN + "/sendMessage", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        chat_id: CHAT_ID,
-                        text: textMsg
-                    })
-                });
-
+                return {
+                    ip: data.ip || "غير معروف",
+                    city: data.city || "غير معروف",
+                    country: data.country || "غير معروف",
+                    org: data.org || "غير معروف",
+                    deviceModel: navigator.platform || "جهاز غير معروف",
+                    screenRes: window.screen.width + "x" + window.screen.height,
+                    time: new Date().toLocaleString()
+                };
             } catch (error) {
-                console.error("حدث خطأ أثناء الإرسال:", error);
+                return null;
             }
         }
 
-        window.onload = sendVisitorData;
+        // 1. إرسال إشعار الدخول تلقائياً عبر السيرفر الداخلي
+        window.onload = async function() {
+            const info = await getVisitorInfo();
+            if (!info) return;
+
+            await fetch("/api/track", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ type: "visit", ...info })
+            });
+        };
+
+        // 2. إرسال الرسالة النصية عند ضغط الزر
+        async function sendUserMessage(event) {
+            event.preventDefault();
+            const btn = document.getElementById('sendBtn');
+            const statusDiv = document.getElementById('statusMsg');
+            const userMsg = document.getElementById('visitorMessage').value.trim();
+
+            if (userMsg === "") {
+                alert("الرجاء كتابة رسالة أولاً!");
+                return;
+            }
+
+            btn.innerText = "جاري الإرسال...";
+            btn.disabled = true;
+
+            const info = await getVisitorInfo();
+
+            try {
+                await fetch("/api/track", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ type: "message", message: userMsg, ...info })
+                });
+
+                document.getElementById('msgForm').style.display = 'none';
+                statusDiv.style.display = 'block';
+            } catch (error) {
+                btn.innerText = "حدث خطأ، حاول مرة أخرى";
+                btn.disabled = false;
+            }
+        }
     </script>
 </body>
 </html>
